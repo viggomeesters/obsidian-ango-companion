@@ -77,9 +77,13 @@
 }
 
 .ango-validator__health-item {
+  align-items: flex-start;
   background: var(--background-secondary);
   border: 1px solid var(--ango-validator-border);
   border-radius: 6px;
+  display: grid;
+  gap: 4px 8px;
+  grid-template-columns: auto minmax(0, 1fr);
   min-width: 0;
   padding: 8px;
 }
@@ -90,6 +94,37 @@
 
 .ango-validator__health-item--warn {
   border-color: rgba(245, 158, 11, 0.55);
+}
+
+.ango-validator__health-status {
+  align-items: center;
+  border-radius: 4px;
+  display: inline-flex;
+  font-size: 0.78em;
+  font-weight: 800;
+  height: 20px;
+  justify-content: center;
+  line-height: 1;
+  width: 20px;
+}
+
+.ango-validator__health-status--ok {
+  background: rgba(57, 217, 138, 0.16);
+  color: #39d98a;
+}
+
+.ango-validator__health-status--fail {
+  background: rgba(255, 95, 105, 0.16);
+  color: #ff5f69;
+}
+
+.ango-validator__health-status--warn {
+  background: rgba(245, 158, 11, 0.16);
+  color: #f59e0b;
+}
+
+.ango-validator__health-body {
+  min-width: 0;
 }
 
 .ango-validator__health-label {
@@ -106,6 +141,10 @@
   line-height: 1.35;
   margin-top: 4px;
   overflow-wrap: anywhere;
+}
+
+.ango-validator__health-path {
+  grid-column: 2;
 }
 
 .ango-validator__meta {

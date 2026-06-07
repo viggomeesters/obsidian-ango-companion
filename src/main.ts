@@ -499,7 +499,7 @@ class AnGoValidatorView extends ItemView {
     const header = container.createDiv({ cls: "ango-validator__header" });
     header.createDiv({ cls: "ango-validator__title", text: "AnGo Companion" });
 
-    renderControlSurface(container, this.plugin.getHealthChecks(), this.plugin);
+    renderControlSurface(container, this.plugin.getHealthChecks());
 
     if (!this.run) {
       container.createDiv({
@@ -738,7 +738,7 @@ function renderRunSummary(parent: HTMLElement, diagnostics: RunDiagnostics): voi
   }
 }
 
-function renderControlSurface(parent: HTMLElement, checks: HealthCheck[], plugin: AnGoCompanionPlugin): void {
+function renderControlSurface(parent: HTMLElement, checks: HealthCheck[]): void {
   const section = parent.createDiv({ cls: "ango-validator__control" });
   const heading = section.createDiv({ cls: "ango-validator__control-heading" });
   heading.createDiv({ cls: "ango-validator__control-title", text: "Control surface" });
@@ -747,17 +747,14 @@ function renderControlSurface(parent: HTMLElement, checks: HealthCheck[], plugin
   const grid = section.createDiv({ cls: "ango-validator__health-grid" });
   checks.forEach((check) => {
     const item = grid.createDiv({ cls: `ango-validator__health-item ango-validator__health-item--${check.status}` });
-    item.createDiv({ cls: "ango-validator__health-label", text: check.label });
-    item.createDiv({ cls: "ango-validator__health-detail", text: check.detail });
-    if (check.path && plugin.resolveVaultFile(check.path)) {
-      const button = item.createEl("button", {
-        cls: "ango-validator__path-link",
-        text: check.path,
-      });
-      button.addEventListener("click", () => {
-        void plugin.openVaultFile(check.path ?? "");
-      });
-    } else if (check.path) {
+    item.createSpan({
+      cls: `ango-validator__health-status ango-validator__health-status--${check.status}`,
+      text: check.status === "ok" ? "✓" : check.status === "warn" ? "!" : "×",
+    });
+    const body = item.createDiv({ cls: "ango-validator__health-body" });
+    body.createDiv({ cls: "ango-validator__health-label", text: check.label });
+    body.createDiv({ cls: "ango-validator__health-detail", text: check.detail });
+    if (check.path) {
       item.createDiv({ cls: "ango-validator__health-path", text: check.path });
     }
   });

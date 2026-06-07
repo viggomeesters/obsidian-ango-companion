@@ -20,16 +20,20 @@ const ANGO_CONTEXT_PATH = "system/context/ango.md";
 const SCHEMA_PATH = "system/contracts/life-os-schema.yaml";
 const VALIDATOR_SCRIPT = "system/scripts/vault/validate_vault.py";
 const WORKFLOW_VALIDATOR_SCRIPT = "system/scripts/vault/validate_vault_workflow.py";
+const VALIDATE_ON_SAVE_DELAY_MS = 900;
+const HISTORY_LIMIT = 10;
 
 interface AnGoSettings {
   persistLastRun: boolean;
   pythonCommand: string;
+  validateOnSave: boolean;
   vaultRoot: string;
 }
 
 const DEFAULT_SETTINGS: AnGoSettings = {
   persistLastRun: true,
   pythonCommand: "python3",
+  validateOnSave: false,
   vaultRoot: "",
 };
 
@@ -59,7 +63,11 @@ interface ValidationRun {
 
 export default class AnGoCompanionPlugin extends Plugin {
   settings: AnGoSettings = DEFAULT_SETTINGS;
+  private history: ValidationRun[] = [];
+  private isRunningValidation = false;
   private lastRun: ValidationRun | null = null;
+  private saveTimers = new Map<string, number>();
+  private statusBarEl: HTMLElement | null = null;
 
   async onload(): Promise<void> {
     await this.loadSettings();
@@ -70,6 +78,16 @@ export default class AnGoCompanionPlugin extends Plugin {
     );
 
     this.addSettingTab(new AnGoSettingTab(this.app, this));
+    this.statusBarEl = this.addStatusBarItem();
+    this.updateStatusBar("Idle");
+
+    this.registerEvent(
+      this.app.vault.on("modify", (file) => {
+        if (file instanceof TFile) {
+          this.scheduleValidateOnSave(file);
+        }
+      }),
+    );
 
     this.addCommand({
       id: "validate-current-note",
@@ -89,6 +107,40 @@ export default class AnGoCompanionPlugin extends Plugin {
       name: "Validate changed files",
       callback: () => {
         void this.validateChangedFiles();
+      },
+    });
+
+    this.addCommand({
+      id: "validate-note-with-context",
+      name: "Validate current note and AnGo context",
+      checkCallback: (checking) => {
+        const file = this.app.workspace.getActiveFile();
+        if (!isMarkdownFile(file)) return false;
+        if (!checking) {
+          void this.validateNoteWithContext(file);
+        }
+        return true;
+      },
+    });
+
+    this.addCommand({
+      id: "validate-current-folder",
+      name: "Validate current folder",
+      checkCallback: (checking) => {
+        const file = this.app.workspace.getActiveFile();
+        if (!file) return false;
+        if (!checking) {
+          void this.validateCurrentFolder(file);
+        }
+        return true;
+      },
+    });
+
+    this.addCommand({
+      id: "validate-vault",
+      name: "Validate vault",
+      callback: () => {
+        void this.validateVault();
       },
     });
 
@@ -123,6 +175,10 @@ export default class AnGoCompanionPlugin extends Plugin {
     return this.lastRun;
   }
 
+  getHistory(): ValidationRun[] {
+    return this.history;
+  }
+
   private async validateCurrentNote(file: TFile): Promise<void> {
     await this.runValidation("Validate current note", file.path, [file.path]);
   }
@@ -131,15 +187,64 @@ export default class AnGoCompanionPlugin extends Plugin {
     await this.runValidation("Validate changed files", "changed files", ["--changed"]);
   }
 
+  private async validateNoteWithContext(file: TFile): Promise<void> {
+    await this.runValidationGroup(
+      "Validate current note and AnGo context",
+      `${file.path} + ${ANGO_CONTEXT_PATH}`,
+      [
+        { args: [file.path], labelSuffix: "current note" },
+        { args: [ANGO_CONTEXT_PATH], labelSuffix: "AnGo context" },
+      ],
+    );
+  }
+
+  private async validateCurrentFolder(file: TFile): Promise<void> {
+    await this.runValidation("Validate current folder", file.parent?.path || "/", [file.parent?.path || "."]);
+  }
+
+  private async validateVault(): Promise<void> {
+    await this.runValidation("Validate vault", "vault", ["--all"]);
+  }
+
+  private scheduleValidateOnSave(file: TFile): void {
+    if (!this.settings.validateOnSave || !isMarkdownFile(file)) return;
+
+    const existingTimer = this.saveTimers.get(file.path);
+    if (existingTimer) window.clearTimeout(existingTimer);
+
+    const timer = window.setTimeout(() => {
+      this.saveTimers.delete(file.path);
+      if (this.isRunningValidation) return;
+      void this.runValidation("Validate saved note", file.path, [file.path]);
+    }, VALIDATE_ON_SAVE_DELAY_MS);
+    this.saveTimers.set(file.path, timer);
+  }
+
   private async runValidation(
     title: string,
     target: string,
     validatorArgs: string[],
   ): Promise<void> {
+    await this.runValidationGroup(title, target, [{ args: validatorArgs }]);
+  }
+
+  private async runValidationGroup(
+    title: string,
+    target: string,
+    validationTargets: { args: string[]; labelSuffix?: string }[],
+  ): Promise<void> {
     if (!Platform.isDesktop) {
       new Notice("AnGo Validator runs only on desktop because it calls local Python scripts.");
       return;
     }
+
+    if (this.isRunningValidation) {
+      new Notice("AnGo validation is already running.");
+      return;
+    }
+
+    this.isRunningValidation = true;
+    this.updateStatusBar("Running");
 
     const vaultRoot = this.getVaultRoot();
     if (!vaultRoot) {
@@ -152,6 +257,8 @@ export default class AnGoCompanionPlugin extends Plugin {
       );
       await this.showRun(run);
       new Notice("AnGo validation could not run: vault root unavailable.");
+      this.isRunningValidation = false;
+      this.updateStatusBar("Failed");
       return;
     }
 
@@ -163,19 +270,32 @@ export default class AnGoCompanionPlugin extends Plugin {
       const run = createSkippedRun(title, target, vaultRoot, missingScripts, this.settings.pythonCommand);
       await this.showRun(run);
       new Notice("AnGo validation could not run: missing script.");
+      this.isRunningValidation = false;
+      this.updateStatusBar("Failed");
       return;
     }
 
     const startedAt = new Date().toISOString();
-    const commands = [
-      await runCommand(this.settings.pythonCommand, [VALIDATOR_SCRIPT, ...validatorArgs], vaultRoot, "Vault validation"),
-      await runCommand(
-        this.settings.pythonCommand,
-        [WORKFLOW_VALIDATOR_SCRIPT, ...validatorArgs],
-        vaultRoot,
-        "Workflow validation",
-      ),
-    ];
+    const commands: CommandResult[] = [];
+    for (const validationTarget of validationTargets) {
+      const suffix = validationTarget.labelSuffix ? ` (${validationTarget.labelSuffix})` : "";
+      commands.push(
+        await runCommand(
+          this.settings.pythonCommand,
+          [VALIDATOR_SCRIPT, ...validationTarget.args],
+          vaultRoot,
+          `Vault validation${suffix}`,
+        ),
+      );
+      commands.push(
+        await runCommand(
+          this.settings.pythonCommand,
+          [WORKFLOW_VALIDATOR_SCRIPT, ...validationTarget.args],
+          vaultRoot,
+          `Workflow validation${suffix}`,
+        ),
+      );
+    }
 
     const run: ValidationRun = {
       title,
@@ -189,6 +309,8 @@ export default class AnGoCompanionPlugin extends Plugin {
     await this.showRun(run);
 
     const ok = commands.every((command) => command.exitCode === 0 && !command.error);
+    this.isRunningValidation = false;
+    this.updateStatusBar(ok ? "Passed" : "Failed");
     new Notice(ok ? "AnGo validation passed." : "AnGo validation failed. See output pane.");
   }
 
@@ -202,6 +324,7 @@ export default class AnGoCompanionPlugin extends Plugin {
 
   private async showRun(run: ValidationRun): Promise<void> {
     this.lastRun = run;
+    this.history = [run, ...this.history.filter((entry) => entry.startedAt !== run.startedAt)].slice(0, HISTORY_LIMIT);
     await this.savePluginData();
 
     const leaf = this.app.workspace.getRightLeaf(false) ?? this.app.workspace.getLeaf(false);
@@ -234,6 +357,14 @@ export default class AnGoCompanionPlugin extends Plugin {
       ...this.settings,
       lastRun: this.settings.persistLastRun ? this.lastRun : null,
     });
+  }
+
+  private updateStatusBar(status: "Failed" | "Idle" | "Passed" | "Running"): void {
+    if (!this.statusBarEl) return;
+    this.statusBarEl.setText(`AnGo: ${status}`);
+    this.statusBarEl.toggleClass("ango-status--failed", status === "Failed");
+    this.statusBarEl.toggleClass("ango-status--passed", status === "Passed");
+    this.statusBarEl.toggleClass("ango-status--running", status === "Running");
   }
 }
 
@@ -300,6 +431,7 @@ class AnGoValidatorView extends ItemView {
     meta.createDiv({ text: `Finished: ${this.run.finishedAt}` });
 
     this.run.commands.forEach((command) => renderCommandResult(container, command, this.run?.vaultRoot ?? "", this.plugin));
+    renderHistory(container, this.plugin.getHistory(), this.run);
   }
 }
 
@@ -338,6 +470,18 @@ class AnGoSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.vaultRoot)
           .onChange(async (value) => {
             this.plugin.settings.vaultRoot = value.trim();
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName("Validate on save")
+      .setDesc("Automatically validate saved Markdown notes after a short debounce. Disabled by default.")
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.validateOnSave)
+          .onChange(async (value) => {
+            this.plugin.settings.validateOnSave = value;
             await this.plugin.saveSettings();
           }),
       );
@@ -587,6 +731,24 @@ function renderPathLinks(parent: HTMLElement, paths: string[], plugin: AnGoCompa
     button.addEventListener("click", () => {
       void plugin.openVaultFile(filePath);
     });
+  });
+}
+
+function renderHistory(parent: HTMLElement, history: ValidationRun[], currentRun: ValidationRun): void {
+  const previousRuns = history.filter((run) => run.startedAt !== currentRun.startedAt);
+  if (previousRuns.length === 0) return;
+
+  const block = parent.createDiv({ cls: "ango-validator__history" });
+  block.createDiv({ cls: "ango-validator__section-title", text: "Session history" });
+  previousRuns.slice(0, 5).forEach((run) => {
+    const ok = run.commands.every((command) => command.exitCode === 0 && !command.error);
+    const item = block.createDiv({ cls: "ango-validator__history-item" });
+    item.createSpan({
+      cls: `ango-validator__status ${ok ? "ango-validator__status--ok" : "ango-validator__status--fail"}`,
+      text: ok ? "OK" : "ERR",
+    });
+    item.createSpan({ cls: "ango-validator__history-title", text: run.title });
+    item.createSpan({ cls: "ango-validator__history-time", text: run.finishedAt });
   });
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "obsidian-ango-companion",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Read-only AnGo vault validation companion for Obsidian.",
   "license": "MIT",
   "author": "Viggo Meesters",

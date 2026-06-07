@@ -99,6 +99,35 @@
   margin-top: 10px;
 }
 
+.ango-validator__history {
+  border-top: 1px solid var(--ango-validator-border);
+  margin-top: 16px;
+  padding-top: 12px;
+}
+
+.ango-validator__history-item {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  margin: 6px 0;
+  min-width: 0;
+}
+
+.ango-validator__history-title {
+  color: var(--text-normal);
+  flex: 1 1 auto;
+  font-size: 0.86em;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ango-validator__history-time {
+  color: var(--ango-validator-muted);
+  flex: 0 0 auto;
+  font-family: var(--ango-validator-code);
+  font-size: 0.72em;
+}
+
 .ango-validator__section-title {
   color: var(--ango-validator-muted);
   font-size: 0.78em;
@@ -225,4 +254,16 @@
   overflow: auto;
   padding: 10px;
   white-space: pre-wrap;
+}
+
+.ango-status--failed {
+  color: #ff5f69;
+}
+
+.ango-status--passed {
+  color: #39d98a;
+}
+
+.ango-status--running {
+  color: #f59e0b;
 }

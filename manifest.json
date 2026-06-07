@@ -1,7 +1,7 @@
 {
   "id": "ango-companion",
   "name": "AnGo Companion",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "minAppVersion": "1.5.0",
   "description": "Read-only AnGo vault validation and context commands.",
   "author": "Viggo Meesters",

@@ -1,6 +1,6 @@
 # Obsidian Community Submission Checklist
 
-Current release target: `0.1.0`
+Current release target: `1.0.0`
 
 ## Repository
 
@@ -12,6 +12,7 @@ Current release target: `0.1.0`
 - [x] `manifest.json.version` uses `x.y.z`.
 - [x] `versions.json` maps plugin version to minimum Obsidian version.
 - [x] Runtime defaults do not include a maintainer-local vault path.
+- [x] `README.md` documents the read-only boundary, diagnosis pane, feedback loop settings, and control surface.
 
 ## Release
 

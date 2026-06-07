@@ -23,8 +23,8 @@ These steps must be completed by the repository owner because they require an Ob
 ## Current release target
 
 - Repository: https://github.com/viggomeesters/obsidian-ango-companion
-- Release: https://github.com/viggomeesters/obsidian-ango-companion/releases/tag/0.1.0
-- Manifest version: `0.1.0`
+- Release: https://github.com/viggomeesters/obsidian-ango-companion/releases/tag/1.0.0
+- Manifest version: `1.0.0`
 - Required release assets:
   - `main.js`
   - `manifest.json`
@@ -55,7 +55,7 @@ Run local AnGo vault validation commands from Obsidian and inspect results in a 
 Long description:
 
 ```text
-AnGo Companion runs existing local vault validation scripts from inside Obsidian and displays command status, duration, stdout, stderr, and failures in a dedicated side pane. It supports validating the current Markdown note or changed vault files. The plugin is desktop-only because it spawns local Python commands, and it is read-only by design: it does not create, fix, stage, or commit vault files.
+AnGo Companion runs existing local vault validation scripts from inside Obsidian and displays command status, duration, stdout, stderr, findings, and failures in a dedicated read-only pane. It supports validating the current Markdown note, changed files, the current folder, the full vault, and the current note together with the AnGo context note. It also provides a local control surface for vault root, Python command, validator scripts, AnGo context, schema, and workflow contract readiness. The plugin is desktop-only because it spawns local Python commands, and it is read-only by design: it does not create, fix, stage, or commit vault files.
 ```
 
 ## Official references

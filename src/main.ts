@@ -84,6 +84,7 @@ export default class AnGoCompanionPlugin extends Plugin {
       VIEW_TYPE_ANGO_VALIDATOR,
       (leaf) => new AnGoValidatorView(leaf, this),
     );
+    this.detachDuplicateValidatorLeaves();
 
     this.addSettingTab(new AnGoSettingTab(this.app, this));
     this.statusBarEl = this.addStatusBarItem();
@@ -384,11 +385,7 @@ export default class AnGoCompanionPlugin extends Plugin {
     this.history = [run, ...this.history.filter((entry) => entry.startedAt !== run.startedAt)].slice(0, HISTORY_LIMIT);
     await this.savePluginData();
 
-    const leaf = this.app.workspace.getRightLeaf(false) ?? this.app.workspace.getLeaf(false);
-    await leaf.setViewState({
-      type: VIEW_TYPE_ANGO_VALIDATOR,
-      active: true,
-    });
+    const leaf = await this.activateValidatorView();
 
     if (leaf.view instanceof AnGoValidatorView) {
       leaf.view.setRun(run);
@@ -396,15 +393,36 @@ export default class AnGoCompanionPlugin extends Plugin {
   }
 
   private async openControlSurface(): Promise<void> {
+    const leaf = await this.activateValidatorView();
+
+    if (leaf.view instanceof AnGoValidatorView) {
+      leaf.view.refresh();
+    }
+  }
+
+  private async activateValidatorView(): Promise<WorkspaceLeaf> {
+    const existingLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_ANGO_VALIDATOR)[0];
+    if (existingLeaf) {
+      await this.app.workspace.revealLeaf(existingLeaf);
+      return existingLeaf;
+    }
+
     const leaf = this.app.workspace.getRightLeaf(false) ?? this.app.workspace.getLeaf(false);
     await leaf.setViewState({
       type: VIEW_TYPE_ANGO_VALIDATOR,
       active: true,
     });
+    await this.app.workspace.revealLeaf(leaf);
+    return leaf;
+  }
 
-    if (leaf.view instanceof AnGoValidatorView) {
-      leaf.view.refresh();
-    }
+  private detachDuplicateValidatorLeaves(): void {
+    this.app.workspace
+      .getLeavesOfType(VIEW_TYPE_ANGO_VALIDATOR)
+      .slice(1)
+      .forEach((leaf) => {
+        leaf.detach();
+      });
   }
 
   async openVaultFile(filePath: string): Promise<void> {

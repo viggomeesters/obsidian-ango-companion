@@ -13,7 +13,7 @@
   <line x1="70" y1="176" x2="1116" y2="176" stroke="#374151"/>
   <text x="70" y="220" fill="#d1d5db" font-family="Menlo, monospace" font-size="22">Validate changed files</text>
   <text x="70" y="252" fill="#d1d5db" font-family="Menlo, monospace" font-size="22">Target: changed files</text>
-  <text x="70" y="284" fill="#d1d5db" font-family="Menlo, monospace" font-size="22">Vault: /Users/.../Documents/vault</text>
+  <text x="70" y="284" fill="#d1d5db" font-family="Menlo, monospace" font-size="22">Vault: /path/to/ango-vault</text>
   <text x="70" y="316" fill="#d1d5db" font-family="Menlo, monospace" font-size="22">Finished: 2026-06-07T17:22:32.977Z</text>
   <line x1="70" y1="350" x2="1116" y2="350" stroke="#374151"/>
   <rect x="70" y="384" width="500" height="116" rx="10" fill="#18212f" stroke="#374151"/>

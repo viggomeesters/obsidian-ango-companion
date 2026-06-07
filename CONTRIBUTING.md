@@ -8,7 +8,7 @@ Thanks for considering a contribution.
 npm install
 npm run build
 npm run typecheck
-npm run install:vault
+OBSIDIAN_VAULT_ROOT="/path/to/your/vault" npm run install:vault
 ```
 
 For manual testing, build the plugin and install the release assets into an Obsidian vault:

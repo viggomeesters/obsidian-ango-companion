@@ -11,6 +11,7 @@ Current release target: `0.1.0`
 - [x] `manifest.json.id` is unique and does not contain `obsidian`.
 - [x] `manifest.json.version` uses `x.y.z`.
 - [x] `versions.json` maps plugin version to minimum Obsidian version.
+- [x] Runtime defaults do not include a maintainer-local vault path.
 
 ## Release
 

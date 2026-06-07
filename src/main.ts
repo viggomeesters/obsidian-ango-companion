@@ -14,8 +14,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 
 const VIEW_TYPE_ANGO_VALIDATOR = "ango-validator-output";
-const DEFAULT_VAULT_ROOT =
-  "/Users/viggomeesters/Library/Mobile Documents/iCloud~md~obsidian/Documents/vault";
+const VAULT_ROOT_PLACEHOLDER = "/path/to/ango-vault";
 const ANGO_CONTEXT_PATH = "system/context/ango.md";
 const SCHEMA_PATH = "system/contracts/life-os-schema.yaml";
 const VALIDATOR_SCRIPT = "system/scripts/vault/validate_vault.py";
@@ -129,12 +128,25 @@ export default class AnGoCompanionPlugin extends Plugin {
     }
 
     const vaultRoot = this.getVaultRoot();
+    if (!vaultRoot) {
+      const run = createConfigurationErrorRun(
+        title,
+        target,
+        "Vault root unavailable",
+        "Set Vault root override to the absolute path of the vault that contains the AnGo validation scripts.",
+        this.settings.pythonCommand,
+      );
+      await this.showRun(run);
+      new Notice("AnGo validation could not run: vault root unavailable.");
+      return;
+    }
+
     const missingScripts = [VALIDATOR_SCRIPT, WORKFLOW_VALIDATOR_SCRIPT].filter(
       (scriptPath) => !existsSync(path.join(vaultRoot, scriptPath)),
     );
 
     if (missingScripts.length > 0) {
-      const run = createSkippedRun(title, target, vaultRoot, missingScripts);
+      const run = createSkippedRun(title, target, vaultRoot, missingScripts, this.settings.pythonCommand);
       await this.showRun(run);
       new Notice("AnGo validation could not run: missing script.");
       return;
@@ -166,12 +178,12 @@ export default class AnGoCompanionPlugin extends Plugin {
     new Notice(ok ? "AnGo validation passed." : "AnGo validation failed. See output pane.");
   }
 
-  private getVaultRoot(): string {
+  private getVaultRoot(): string | null {
     const configuredRoot = this.settings.vaultRoot.trim();
     if (configuredRoot) return configuredRoot;
 
     const adapter = this.app.vault.adapter as { getBasePath?: () => string };
-    return adapter.getBasePath?.() ?? DEFAULT_VAULT_ROOT;
+    return adapter.getBasePath?.() ?? null;
   }
 
   private async showRun(run: ValidationRun): Promise<void> {
@@ -280,10 +292,10 @@ class AnGoSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Vault root override")
-      .setDesc("Leave empty to use the current Obsidian vault path.")
+      .setDesc("Leave empty to use the current Obsidian vault path. Set an absolute path when validating a different AnGo vault.")
       .addText((text) =>
         text
-          .setPlaceholder(DEFAULT_VAULT_ROOT)
+          .setPlaceholder(VAULT_ROOT_PLACEHOLDER)
           .setValue(this.plugin.settings.vaultRoot)
           .onChange(async (value) => {
             this.plugin.settings.vaultRoot = value.trim();
@@ -355,6 +367,7 @@ function createSkippedRun(
   target: string,
   vaultRoot: string,
   missingScripts: string[],
+  executable: string,
 ): ValidationRun {
   const now = new Date().toISOString();
   return {
@@ -365,7 +378,7 @@ function createSkippedRun(
     vaultRoot,
     commands: missingScripts.map((scriptPath) => ({
       label: "Missing script",
-      executable: "python3",
+      executable,
       args: [scriptPath],
       exitCode: null,
       stdout: "",
@@ -373,6 +386,35 @@ function createSkippedRun(
       durationMs: 0,
       error: "Script not found",
     })),
+  };
+}
+
+function createConfigurationErrorRun(
+  title: string,
+  target: string,
+  error: string,
+  details: string,
+  executable: string,
+): ValidationRun {
+  const now = new Date().toISOString();
+  return {
+    title,
+    target,
+    startedAt: now,
+    finishedAt: now,
+    vaultRoot: "(not configured)",
+    commands: [
+      {
+        label: "Configuration",
+        executable,
+        args: [],
+        exitCode: null,
+        stdout: "",
+        stderr: details,
+        durationMs: 0,
+        error,
+      },
+    ],
   };
 }
 

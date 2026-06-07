@@ -27,6 +27,8 @@ AnGo Companion is a desktop-only Obsidian plugin that runs local vault validatio
 
 ## Requirements
 
+AnGo Companion runs on desktop Obsidian because it spawns local Python processes. It does not bundle AnGo validators; it calls the validators that already live in your vault.
+
 AnGo Companion expects these scripts to exist in the target vault:
 
 ```text
@@ -76,16 +78,25 @@ https://github.com/viggomeesters/obsidian-ango-companion
 - **Python command**: defaults to `python3`.
 - **Vault root override**: optional. Leave empty to use the current Obsidian vault path.
 
+If Obsidian cannot expose the current vault path on your platform, set **Vault root override** to the absolute path of the AnGo-style vault that contains `system/scripts/vault/validate_vault.py` and `system/scripts/vault/validate_vault_workflow.py`.
+
+## Troubleshooting
+
+- **Missing script**: confirm that the configured vault root contains both required validator scripts under `system/scripts/vault/`.
+- **Python command not found**: set **Python command** to the full path of your Python executable.
+- **Wrong vault**: set **Vault root override** when the validators should run against a different vault than the one currently open in Obsidian.
+- **Validation fails**: inspect the output pane. The plugin shows the exact command, duration, stdout, stderr, and exit status so the same command can be reproduced in a terminal.
+
 ## Development
 
 ```bash
 npm install
 npm run build
 npm run typecheck
-npm run install:vault
+OBSIDIAN_VAULT_ROOT="/path/to/your/vault" npm run install:vault
 ```
 
-For local development, run `npm run build` and `npm run install:vault` to copy the release assets into `.obsidian/plugins/ango-companion/` inside the active Obsidian vault. Set `OBSIDIAN_VAULT_ROOT` to install into another vault.
+For local development, run `npm run build` and set `OBSIDIAN_VAULT_ROOT` when running `npm run install:vault`. The install script copies the release assets into `.obsidian/plugins/ango-companion/` inside that vault.
 
 ## Release process
 

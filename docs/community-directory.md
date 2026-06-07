@@ -34,6 +34,9 @@ These steps must be completed by the repository owner because they require an Ob
   - `LICENSE`
   - `manifest.json`
   - `versions.json`
+- Public-default check:
+  - no maintainer-local vault path is used as a runtime fallback
+  - users can leave the vault root override empty to use the current Obsidian vault path
 
 ## Listing copy
 

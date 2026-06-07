@@ -4,7 +4,7 @@ Current release target: `0.1.0`
 
 ## Repository
 
-- [x] Local git repository exists.
+- [x] Public GitHub repository exists.
 - [x] `README.md` describes what the plugin does and how to use it.
 - [x] `LICENSE` exists.
 - [x] `manifest.json` exists at repository root.
@@ -16,11 +16,10 @@ Current release target: `0.1.0`
 
 - [x] `npm run build` passes.
 - [x] `npm run typecheck` passes.
-- [ ] Public GitHub repository exists.
-- [ ] GitHub release tag equals `manifest.json.version`.
-- [ ] Release assets include `main.js`.
-- [ ] Release assets include `manifest.json`.
-- [ ] Release assets include `styles.css`.
+- [x] GitHub release tag equals `manifest.json.version`.
+- [x] Release assets include `main.js`.
+- [x] Release assets include `manifest.json`.
+- [x] Release assets include `styles.css`.
 
 ## Directory Submission
 

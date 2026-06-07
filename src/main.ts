@@ -5,6 +5,7 @@ import {
   Platform,
   Plugin,
   PluginSettingTab,
+  normalizePath,
   Setting,
   TFile,
   WorkspaceLeaf,
@@ -21,14 +22,20 @@ const VALIDATOR_SCRIPT = "system/scripts/vault/validate_vault.py";
 const WORKFLOW_VALIDATOR_SCRIPT = "system/scripts/vault/validate_vault_workflow.py";
 
 interface AnGoSettings {
+  persistLastRun: boolean;
   pythonCommand: string;
   vaultRoot: string;
 }
 
 const DEFAULT_SETTINGS: AnGoSettings = {
+  persistLastRun: true,
   pythonCommand: "python3",
   vaultRoot: "",
 };
+
+interface AnGoPluginData extends Partial<AnGoSettings> {
+  lastRun?: ValidationRun | null;
+}
 
 interface CommandResult {
   label: string;
@@ -52,13 +59,14 @@ interface ValidationRun {
 
 export default class AnGoCompanionPlugin extends Plugin {
   settings: AnGoSettings = DEFAULT_SETTINGS;
+  private lastRun: ValidationRun | null = null;
 
   async onload(): Promise<void> {
     await this.loadSettings();
 
     this.registerView(
       VIEW_TYPE_ANGO_VALIDATOR,
-      (leaf) => new AnGoValidatorView(leaf),
+      (leaf) => new AnGoValidatorView(leaf, this),
     );
 
     this.addSettingTab(new AnGoSettingTab(this.app, this));
@@ -102,11 +110,17 @@ export default class AnGoCompanionPlugin extends Plugin {
   }
 
   async loadSettings(): Promise<void> {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    const data = (await this.loadData()) as AnGoPluginData | null;
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
+    this.lastRun = data?.lastRun ?? null;
   }
 
   async saveSettings(): Promise<void> {
-    await this.saveData(this.settings);
+    await this.savePluginData();
+  }
+
+  getLastRun(): ValidationRun | null {
+    return this.lastRun;
   }
 
   private async validateCurrentNote(file: TFile): Promise<void> {
@@ -187,6 +201,9 @@ export default class AnGoCompanionPlugin extends Plugin {
   }
 
   private async showRun(run: ValidationRun): Promise<void> {
+    this.lastRun = run;
+    await this.savePluginData();
+
     const leaf = this.app.workspace.getRightLeaf(false) ?? this.app.workspace.getLeaf(false);
     await leaf.setViewState({
       type: VIEW_TYPE_ANGO_VALIDATOR,
@@ -198,7 +215,7 @@ export default class AnGoCompanionPlugin extends Plugin {
     }
   }
 
-  private async openVaultFile(filePath: string): Promise<void> {
+  async openVaultFile(filePath: string): Promise<void> {
     const file = this.app.vault.getAbstractFileByPath(filePath);
     if (!(file instanceof TFile)) {
       new Notice(`AnGo file not found: ${filePath}`);
@@ -206,10 +223,28 @@ export default class AnGoCompanionPlugin extends Plugin {
     }
     await this.app.workspace.getLeaf(false).openFile(file);
   }
+
+  resolveVaultFile(filePath: string): TFile | null {
+    const file = this.app.vault.getAbstractFileByPath(filePath);
+    return file instanceof TFile ? file : null;
+  }
+
+  private async savePluginData(): Promise<void> {
+    await this.saveData({
+      ...this.settings,
+      lastRun: this.settings.persistLastRun ? this.lastRun : null,
+    });
+  }
 }
 
 class AnGoValidatorView extends ItemView {
   private run: ValidationRun | null = null;
+  private readonly plugin: AnGoCompanionPlugin;
+
+  constructor(leaf: WorkspaceLeaf, plugin: AnGoCompanionPlugin) {
+    super(leaf);
+    this.plugin = plugin;
+  }
 
   getViewType(): string {
     return VIEW_TYPE_ANGO_VALIDATOR;
@@ -229,6 +264,7 @@ class AnGoValidatorView extends ItemView {
   }
 
   async onOpen(): Promise<void> {
+    this.run = this.run ?? this.plugin.getLastRun();
     this.render();
   }
 
@@ -248,11 +284,14 @@ class AnGoValidatorView extends ItemView {
       return;
     }
 
-    const ok = this.run.commands.every((command) => command.exitCode === 0 && !command.error);
+    const diagnostics = analyzeRun(this.run);
+    const ok = diagnostics.failedCommands.length === 0;
     header.createDiv({
       cls: `ango-validator__badge ${ok ? "ango-validator__badge--ok" : "ango-validator__badge--fail"}`,
       text: ok ? "Passed" : "Failed",
     });
+
+    renderRunSummary(container, diagnostics);
 
     const meta = container.createDiv({ cls: "ango-validator__meta" });
     meta.createDiv({ text: this.run.title });
@@ -260,7 +299,7 @@ class AnGoValidatorView extends ItemView {
     meta.createDiv({ text: `Vault: ${this.run.vaultRoot}` });
     meta.createDiv({ text: `Finished: ${this.run.finishedAt}` });
 
-    this.run.commands.forEach((command) => renderCommandResult(container, command));
+    this.run.commands.forEach((command) => renderCommandResult(container, command, this.run?.vaultRoot ?? "", this.plugin));
   }
 }
 
@@ -299,6 +338,18 @@ class AnGoSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.vaultRoot)
           .onChange(async (value) => {
             this.plugin.settings.vaultRoot = value.trim();
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName("Remember last validation run")
+      .setDesc("Store the last local validator output in this plugin's Obsidian data so the pane can restore it after reopening.")
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.persistLastRun)
+          .onChange(async (value) => {
+            this.plugin.settings.persistLastRun = value;
             await this.plugin.saveSettings();
           }),
       );
@@ -418,11 +469,54 @@ function createConfigurationErrorRun(
   };
 }
 
-function renderCommandResult(parent: HTMLElement, command: CommandResult): void {
+interface CommandDiagnostics {
+  errors: string[];
+  warnings: string[];
+  paths: string[];
+}
+
+interface RunDiagnostics {
+  errorCount: number;
+  failedCommands: CommandResult[];
+  commandDiagnostics: Map<CommandResult, CommandDiagnostics>;
+  warningCount: number;
+}
+
+function renderRunSummary(parent: HTMLElement, diagnostics: RunDiagnostics): void {
+  const summary = parent.createDiv({ cls: "ango-validator__summary" });
+  renderSummaryItem(summary, "Errors", String(diagnostics.errorCount), diagnostics.errorCount > 0 ? "fail" : "ok");
+  renderSummaryItem(summary, "Warnings", String(diagnostics.warningCount), diagnostics.warningCount > 0 ? "warn" : "ok");
+  renderSummaryItem(summary, "Failed validators", String(diagnostics.failedCommands.length), diagnostics.failedCommands.length > 0 ? "fail" : "ok");
+
+  if (diagnostics.failedCommands.length > 0) {
+    const failed = parent.createDiv({ cls: "ango-validator__failed" });
+    failed.createDiv({ cls: "ango-validator__section-title", text: "Failed validators" });
+    diagnostics.failedCommands.forEach((command) => {
+      failed.createDiv({
+        cls: "ango-validator__finding ango-validator__finding--error",
+        text: `${command.label}: ${command.error ?? `exit ${command.exitCode ?? "unknown"}`}`,
+      });
+    });
+  }
+}
+
+function renderSummaryItem(parent: HTMLElement, label: string, value: string, tone: "fail" | "ok" | "warn"): void {
+  const item = parent.createDiv({ cls: `ango-validator__summary-item ango-validator__summary-item--${tone}` });
+  item.createDiv({ cls: "ango-validator__summary-value", text: value });
+  item.createDiv({ cls: "ango-validator__summary-label", text: label });
+}
+
+function renderCommandResult(
+  parent: HTMLElement,
+  command: CommandResult,
+  vaultRoot: string,
+  plugin: AnGoCompanionPlugin,
+): void {
   const section = parent.createEl("details", {
     cls: "ango-validator__command",
   });
   section.open = command.exitCode !== 0 || Boolean(command.error);
+  const diagnostics = analyzeCommand(command, vaultRoot);
 
   const summary = section.createEl("summary", { cls: "ango-validator__command-summary" });
   const success = command.exitCode === 0 && !command.error;
@@ -440,12 +534,60 @@ function renderCommandResult(parent: HTMLElement, command: CommandResult): void 
     text: `${command.durationMs} ms`,
   });
 
+  const actions = section.createDiv({ cls: "ango-validator__actions" });
+  renderCopyButton(actions, "Copy command", `${command.executable} ${command.args.join(" ")}`);
+  renderCopyButton(actions, "Copy stdout", command.stdout);
+  renderCopyButton(actions, "Copy stderr", command.stderr);
+
   if (command.error) {
     section.createDiv({ cls: "ango-validator__error", text: command.error });
   }
 
+  renderFindings(section, diagnostics);
+  renderPathLinks(section, diagnostics.paths, plugin);
   renderOutputBlock(section, "stdout", command.stdout);
   renderOutputBlock(section, "stderr", command.stderr);
+}
+
+function renderCopyButton(parent: HTMLElement, label: string, value: string): void {
+  const button = parent.createEl("button", {
+    cls: "ango-validator__button",
+    text: label,
+  });
+  button.addEventListener("click", async () => {
+    await navigator.clipboard.writeText(value);
+    new Notice(`${label} copied.`);
+  });
+}
+
+function renderFindings(parent: HTMLElement, diagnostics: CommandDiagnostics): void {
+  if (diagnostics.errors.length === 0 && diagnostics.warnings.length === 0) return;
+
+  const block = parent.createDiv({ cls: "ango-validator__findings" });
+  block.createDiv({ cls: "ango-validator__section-title", text: "Findings" });
+  diagnostics.errors.forEach((line) => {
+    block.createDiv({ cls: "ango-validator__finding ango-validator__finding--error", text: line });
+  });
+  diagnostics.warnings.forEach((line) => {
+    block.createDiv({ cls: "ango-validator__finding ango-validator__finding--warning", text: line });
+  });
+}
+
+function renderPathLinks(parent: HTMLElement, paths: string[], plugin: AnGoCompanionPlugin): void {
+  const availablePaths = paths.filter((filePath) => plugin.resolveVaultFile(filePath));
+  if (availablePaths.length === 0) return;
+
+  const block = parent.createDiv({ cls: "ango-validator__path-links" });
+  block.createDiv({ cls: "ango-validator__section-title", text: "Referenced files" });
+  availablePaths.forEach((filePath) => {
+    const button = block.createEl("button", {
+      cls: "ango-validator__path-link",
+      text: filePath,
+    });
+    button.addEventListener("click", () => {
+      void plugin.openVaultFile(filePath);
+    });
+  });
 }
 
 function renderOutputBlock(parent: HTMLElement, label: string, output: string): void {
@@ -455,4 +597,79 @@ function renderOutputBlock(parent: HTMLElement, label: string, output: string): 
     cls: "ango-validator__output",
     text: output.trim() || "(empty)",
   });
+}
+
+function analyzeRun(run: ValidationRun): RunDiagnostics {
+  const commandDiagnostics = new Map<CommandResult, CommandDiagnostics>();
+  let errorCount = 0;
+  let warningCount = 0;
+  const failedCommands: CommandResult[] = [];
+
+  run.commands.forEach((command) => {
+    const diagnostics = analyzeCommand(command, run.vaultRoot);
+    commandDiagnostics.set(command, diagnostics);
+    errorCount += diagnostics.errors.length;
+    warningCount += diagnostics.warnings.length;
+
+    if (command.exitCode !== 0 || command.error) {
+      failedCommands.push(command);
+      if (diagnostics.errors.length === 0) errorCount += 1;
+    }
+  });
+
+  return {
+    commandDiagnostics,
+    errorCount,
+    failedCommands,
+    warningCount,
+  };
+}
+
+function analyzeCommand(command: CommandResult, vaultRoot: string): CommandDiagnostics {
+  const combinedOutput = [command.error ?? "", command.stdout, command.stderr].join("\n");
+  const lines = combinedOutput
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  return {
+    errors: unique(lines.filter(isErrorLine)),
+    warnings: unique(lines.filter(isWarningLine)),
+    paths: extractVaultPaths(combinedOutput, vaultRoot),
+  };
+}
+
+function isErrorLine(line: string): boolean {
+  if (/\b0\s+errors?\b/i.test(line)) return false;
+  return /\b(error|err|failed|failure|traceback|exception|missing)\b/i.test(line);
+}
+
+function isWarningLine(line: string): boolean {
+  if (/\b0\s+warnings?\b/i.test(line)) return false;
+  return /\b(warn|warning)\b/i.test(line);
+}
+
+function extractVaultPaths(output: string, vaultRoot: string): string[] {
+  const matches = output.match(/(?:\/[^\s"'<>]+|[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)+\.[A-Za-z0-9_.-]+)/g) ?? [];
+  const paths = matches
+    .map((candidate) => candidate.replace(/[),.;:]+$/g, ""))
+    .map((candidate) => toVaultRelativePath(candidate, vaultRoot))
+    .filter((candidate): candidate is string => Boolean(candidate));
+  return unique(paths);
+}
+
+function toVaultRelativePath(candidate: string, vaultRoot: string): string | null {
+  if (path.isAbsolute(candidate)) {
+    if (!vaultRoot || vaultRoot === "(not configured)") return null;
+
+    const relativePath = path.relative(vaultRoot, candidate);
+    if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) return null;
+    return normalizePath(relativePath);
+  }
+
+  return normalizePath(candidate);
+}
+
+function unique(values: string[]): string[] {
+  return [...new Set(values)];
 }

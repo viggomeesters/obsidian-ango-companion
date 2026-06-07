@@ -22,6 +22,8 @@ AnGo Companion is a desktop-only Obsidian plugin that runs local vault validatio
 - Adds `AnGo: Validate changed files`.
 - Runs the existing vault validators from the configured vault root.
 - Shows command status, duration, stdout, stderr, and failure details in an Obsidian view.
+- Summarizes validation runs with error/warning counts, failed validators, highlighted findings, copy buttons, and links to referenced vault files when they can be resolved safely.
+- Remembers the last validation run so reopening the pane keeps useful context available.
 - Opens the AnGo context note and schema from commands.
 - Stays read-only: it does not create, modify, fix, stage, or commit vault files.
 
@@ -77,6 +79,7 @@ https://github.com/viggomeesters/obsidian-ango-companion
 
 - **Python command**: defaults to `python3`.
 - **Vault root override**: optional. Leave empty to use the current Obsidian vault path.
+- **Remember last validation run**: enabled by default. Stores the last local validation output in the plugin's Obsidian data so the pane can restore it after reopening.
 
 If Obsidian cannot expose the current vault path on your platform, set **Vault root override** to the absolute path of the AnGo-style vault that contains `system/scripts/vault/validate_vault.py` and `system/scripts/vault/validate_vault_workflow.py`.
 
@@ -86,6 +89,7 @@ If Obsidian cannot expose the current vault path on your platform, set **Vault r
 - **Python command not found**: set **Python command** to the full path of your Python executable.
 - **Wrong vault**: set **Vault root override** when the validators should run against a different vault than the one currently open in Obsidian.
 - **Validation fails**: inspect the output pane. The plugin shows the exact command, duration, stdout, stderr, and exit status so the same command can be reproduced in a terminal.
+- **Sensitive output**: disable **Remember last validation run** if validator output may contain details you do not want stored in plugin data.
 
 ## Development
 

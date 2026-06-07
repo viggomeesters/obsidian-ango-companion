@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+  <title id="title">AnGo Companion validation output</title>
+  <desc id="desc">Mock screenshot of the AnGo Validator pane in Obsidian.</desc>
+  <rect width="1200" height="760" rx="18" fill="#0f172a"/>
+  <rect x="40" y="40" width="1120" height="680" rx="14" fill="#1f2937" stroke="#374151"/>
+  <rect x="40" y="40" width="1120" height="58" rx="14" fill="#111827"/>
+  <circle cx="76" cy="69" r="8" fill="#ef4444"/>
+  <circle cx="104" cy="69" r="8" fill="#f59e0b"/>
+  <circle cx="132" cy="69" r="8" fill="#22c55e"/>
+  <text x="70" y="150" fill="#f9fafb" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="750">AnGo Validator</text>
+  <rect x="1030" y="122" width="86" height="32" rx="6" fill="#064e3b"/>
+  <text x="1053" y="144" fill="#86efac" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="800">Passed</text>
+  <line x1="70" y1="176" x2="1116" y2="176" stroke="#374151"/>
+  <text x="70" y="220" fill="#d1d5db" font-family="Menlo, monospace" font-size="22">Validate changed files</text>
+  <text x="70" y="252" fill="#d1d5db" font-family="Menlo, monospace" font-size="22">Target: changed files</text>
+  <text x="70" y="284" fill="#d1d5db" font-family="Menlo, monospace" font-size="22">Vault: /Users/.../Documents/vault</text>
+  <text x="70" y="316" fill="#d1d5db" font-family="Menlo, monospace" font-size="22">Finished: 2026-06-07T17:22:32.977Z</text>
+  <line x1="70" y1="350" x2="1116" y2="350" stroke="#374151"/>
+  <rect x="70" y="384" width="500" height="116" rx="10" fill="#18212f" stroke="#374151"/>
+  <rect x="94" y="427" width="52" height="32" rx="6" fill="#064e3b"/>
+  <text x="109" y="450" fill="#86efac" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="800">OK</text>
+  <text x="168" y="425" fill="#f9fafb" font-family="Inter, Arial, sans-serif" font-size="25" font-weight="760">Vault validation</text>
+  <text x="168" y="462" fill="#9ca3af" font-family="Menlo, monospace" font-size="17">python3 validate_vault.py --changed</text>
+  <text x="494" y="462" fill="#9ca3af" font-family="Menlo, monospace" font-size="17">469 ms</text>
+  <rect x="70" y="528" width="500" height="116" rx="10" fill="#18212f" stroke="#374151"/>
+  <rect x="94" y="571" width="52" height="32" rx="6" fill="#064e3b"/>
+  <text x="109" y="594" fill="#86efac" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="800">OK</text>
+  <text x="168" y="569" fill="#f9fafb" font-family="Inter, Arial, sans-serif" font-size="25" font-weight="760">Workflow validation</text>
+  <text x="168" y="606" fill="#9ca3af" font-family="Menlo, monospace" font-size="17">python3 validate_workflow.py --changed</text>
+  <text x="494" y="606" fill="#9ca3af" font-family="Menlo, monospace" font-size="17">219 ms</text>
+</svg>

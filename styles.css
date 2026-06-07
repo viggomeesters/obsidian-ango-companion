@@ -1,0 +1,127 @@
+.ango-validator {
+  --ango-validator-border: var(--background-modifier-border);
+  --ango-validator-muted: var(--text-muted);
+  --ango-validator-code: var(--font-monospace);
+  padding: 16px 18px 28px;
+}
+
+.ango-validator__header {
+  align-items: center;
+  border-bottom: 1px solid var(--ango-validator-border);
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+}
+
+.ango-validator__title {
+  color: var(--text-normal);
+  font-size: 1.08em;
+  font-weight: 650;
+}
+
+.ango-validator__badge,
+.ango-validator__status {
+  border-radius: 4px;
+  font-size: 0.74em;
+  font-weight: 700;
+  letter-spacing: 0;
+  padding: 2px 7px;
+}
+
+.ango-validator__badge--ok,
+.ango-validator__status--ok {
+  background: rgba(57, 217, 138, 0.16);
+  color: #39d98a;
+}
+
+.ango-validator__badge--fail,
+.ango-validator__status--fail {
+  background: rgba(255, 95, 105, 0.16);
+  color: #ff5f69;
+}
+
+.ango-validator__empty {
+  color: var(--ango-validator-muted);
+  line-height: 1.45;
+}
+
+.ango-validator__meta {
+  border-bottom: 1px solid var(--ango-validator-border);
+  color: var(--ango-validator-muted);
+  font-family: var(--ango-validator-code);
+  font-size: 0.82em;
+  line-height: 1.45;
+  margin-bottom: 12px;
+  overflow-wrap: anywhere;
+  padding-bottom: 12px;
+}
+
+.ango-validator__command {
+  border: 1px solid var(--ango-validator-border);
+  border-radius: 6px;
+  margin: 10px 0;
+  padding: 8px 10px;
+}
+
+.ango-validator__command-summary {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ango-validator__command-label {
+  color: var(--text-normal);
+  font-weight: 600;
+}
+
+.ango-validator__command-code {
+  color: var(--ango-validator-muted);
+  flex: 1 1 auto;
+  font-family: var(--ango-validator-code);
+  font-size: 0.78em;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ango-validator__duration {
+  color: var(--ango-validator-muted);
+  flex: 0 0 auto;
+  font-family: var(--ango-validator-code);
+  font-size: 0.78em;
+}
+
+.ango-validator__error {
+  color: #ff5f69;
+  margin-top: 10px;
+}
+
+.ango-validator__output-block {
+  margin-top: 10px;
+}
+
+.ango-validator__output-label {
+  color: var(--ango-validator-muted);
+  font-size: 0.78em;
+  font-weight: 650;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.ango-validator__output {
+  background: var(--background-secondary);
+  border: 1px solid var(--ango-validator-border);
+  border-radius: 6px;
+  color: var(--text-normal);
+  font-family: var(--ango-validator-code);
+  font-size: 0.82em;
+  line-height: 1.4;
+  margin: 0;
+  max-height: 320px;
+  overflow: auto;
+  padding: 10px;
+  white-space: pre-wrap;
+}

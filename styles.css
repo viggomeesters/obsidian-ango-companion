@@ -47,6 +47,67 @@
   line-height: 1.45;
 }
 
+.ango-validator__control {
+  border-bottom: 1px solid var(--ango-validator-border);
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+}
+
+.ango-validator__control-heading {
+  margin-bottom: 10px;
+}
+
+.ango-validator__control-title {
+  color: var(--text-normal);
+  font-size: 0.98em;
+  font-weight: 700;
+}
+
+.ango-validator__control-subtitle {
+  color: var(--ango-validator-muted);
+  font-size: 0.82em;
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
+.ango-validator__health-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.ango-validator__health-item {
+  background: var(--background-secondary);
+  border: 1px solid var(--ango-validator-border);
+  border-radius: 6px;
+  min-width: 0;
+  padding: 8px;
+}
+
+.ango-validator__health-item--fail {
+  border-color: rgba(255, 95, 105, 0.55);
+}
+
+.ango-validator__health-item--warn {
+  border-color: rgba(245, 158, 11, 0.55);
+}
+
+.ango-validator__health-label {
+  color: var(--text-normal);
+  font-size: 0.84em;
+  font-weight: 650;
+}
+
+.ango-validator__health-detail,
+.ango-validator__health-path {
+  color: var(--ango-validator-muted);
+  font-family: var(--ango-validator-code);
+  font-size: 0.74em;
+  line-height: 1.35;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
 .ango-validator__meta {
   border-bottom: 1px solid var(--ango-validator-border);
   color: var(--ango-validator-muted);

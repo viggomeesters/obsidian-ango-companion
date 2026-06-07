@@ -18,6 +18,7 @@ const VIEW_TYPE_ANGO_VALIDATOR = "ango-validator-output";
 const VAULT_ROOT_PLACEHOLDER = "/path/to/ango-vault";
 const ANGO_CONTEXT_PATH = "system/context/ango.md";
 const SCHEMA_PATH = "system/contracts/life-os-schema.yaml";
+const VAULT_WORKFLOW_PATH = "system/contracts/vault-workflow.yaml";
 const VALIDATOR_SCRIPT = "system/scripts/vault/validate_vault.py";
 const WORKFLOW_VALIDATOR_SCRIPT = "system/scripts/vault/validate_vault_workflow.py";
 const VALIDATE_ON_SAVE_DELAY_MS = 900;
@@ -59,6 +60,13 @@ interface ValidationRun {
   finishedAt: string;
   vaultRoot: string;
   commands: CommandResult[];
+}
+
+interface HealthCheck {
+  detail: string;
+  label: string;
+  path?: string;
+  status: "fail" | "ok" | "warn";
 }
 
 export default class AnGoCompanionPlugin extends Plugin {
@@ -145,6 +153,14 @@ export default class AnGoCompanionPlugin extends Plugin {
     });
 
     this.addCommand({
+      id: "open-control-surface",
+      name: "Open control surface",
+      callback: () => {
+        void this.openControlSurface();
+      },
+    });
+
+    this.addCommand({
       id: "open-ango-context",
       name: "Open AnGo context",
       callback: () => {
@@ -179,6 +195,37 @@ export default class AnGoCompanionPlugin extends Plugin {
     return this.history;
   }
 
+  getHealthChecks(): HealthCheck[] {
+    const vaultRoot = this.getVaultRoot();
+    if (!vaultRoot) {
+      return [
+        {
+          detail: "Set Vault root override if Obsidian cannot provide a local vault path.",
+          label: "Vault root",
+          status: "fail",
+        },
+      ];
+    }
+
+    return [
+      {
+        detail: vaultRoot,
+        label: "Vault root",
+        status: "ok",
+      },
+      this.createFileHealthCheck("Vault validator", VALIDATOR_SCRIPT, vaultRoot),
+      this.createFileHealthCheck("Workflow validator", WORKFLOW_VALIDATOR_SCRIPT, vaultRoot),
+      this.createFileHealthCheck("AnGo context", ANGO_CONTEXT_PATH, vaultRoot),
+      this.createFileHealthCheck("Schema", SCHEMA_PATH, vaultRoot),
+      this.createFileHealthCheck("Workflow contract", VAULT_WORKFLOW_PATH, vaultRoot),
+      {
+        detail: this.settings.pythonCommand,
+        label: "Python command",
+        status: this.settings.pythonCommand.trim() ? "ok" : "fail",
+      },
+    ];
+  }
+
   private async validateCurrentNote(file: TFile): Promise<void> {
     await this.runValidation("Validate current note", file.path, [file.path]);
   }
@@ -204,6 +251,16 @@ export default class AnGoCompanionPlugin extends Plugin {
 
   private async validateVault(): Promise<void> {
     await this.runValidation("Validate vault", "vault", ["--all"]);
+  }
+
+  private createFileHealthCheck(label: string, filePath: string, vaultRoot: string): HealthCheck {
+    const exists = existsSync(path.join(vaultRoot, filePath));
+    return {
+      detail: exists ? "Available" : "Missing",
+      label,
+      path: filePath,
+      status: exists ? "ok" : "fail",
+    };
   }
 
   private scheduleValidateOnSave(file: TFile): void {
@@ -338,6 +395,18 @@ export default class AnGoCompanionPlugin extends Plugin {
     }
   }
 
+  private async openControlSurface(): Promise<void> {
+    const leaf = this.app.workspace.getRightLeaf(false) ?? this.app.workspace.getLeaf(false);
+    await leaf.setViewState({
+      type: VIEW_TYPE_ANGO_VALIDATOR,
+      active: true,
+    });
+
+    if (leaf.view instanceof AnGoValidatorView) {
+      leaf.view.refresh();
+    }
+  }
+
   async openVaultFile(filePath: string): Promise<void> {
     const file = this.app.vault.getAbstractFileByPath(filePath);
     if (!(file instanceof TFile)) {
@@ -394,6 +463,11 @@ class AnGoValidatorView extends ItemView {
     this.render();
   }
 
+  refresh(): void {
+    this.run = this.run ?? this.plugin.getLastRun();
+    this.render();
+  }
+
   async onOpen(): Promise<void> {
     this.run = this.run ?? this.plugin.getLastRun();
     this.render();
@@ -405,7 +479,9 @@ class AnGoValidatorView extends ItemView {
     container.addClass("ango-validator");
 
     const header = container.createDiv({ cls: "ango-validator__header" });
-    header.createDiv({ cls: "ango-validator__title", text: "AnGo Validator" });
+    header.createDiv({ cls: "ango-validator__title", text: "AnGo Companion" });
+
+    renderControlSurface(container, this.plugin.getHealthChecks(), this.plugin);
 
     if (!this.run) {
       container.createDiv({
@@ -642,6 +718,31 @@ function renderRunSummary(parent: HTMLElement, diagnostics: RunDiagnostics): voi
       });
     });
   }
+}
+
+function renderControlSurface(parent: HTMLElement, checks: HealthCheck[], plugin: AnGoCompanionPlugin): void {
+  const section = parent.createDiv({ cls: "ango-validator__control" });
+  const heading = section.createDiv({ cls: "ango-validator__control-heading" });
+  heading.createDiv({ cls: "ango-validator__control-title", text: "Control surface" });
+  heading.createDiv({ cls: "ango-validator__control-subtitle", text: "Read-only vault health, contracts, and validator readiness." });
+
+  const grid = section.createDiv({ cls: "ango-validator__health-grid" });
+  checks.forEach((check) => {
+    const item = grid.createDiv({ cls: `ango-validator__health-item ango-validator__health-item--${check.status}` });
+    item.createDiv({ cls: "ango-validator__health-label", text: check.label });
+    item.createDiv({ cls: "ango-validator__health-detail", text: check.detail });
+    if (check.path && plugin.resolveVaultFile(check.path)) {
+      const button = item.createEl("button", {
+        cls: "ango-validator__path-link",
+        text: check.path,
+      });
+      button.addEventListener("click", () => {
+        void plugin.openVaultFile(check.path ?? "");
+      });
+    } else if (check.path) {
+      item.createDiv({ cls: "ango-validator__health-path", text: check.path });
+    }
+  });
 }
 
 function renderSummaryItem(parent: HTMLElement, label: string, value: string, tone: "fail" | "ok" | "warn"): void {

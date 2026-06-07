@@ -23,7 +23,9 @@ AnGo Companion is a desktop-only Obsidian plugin that runs local vault validatio
 - Adds `AnGo: Validate current note and AnGo context`.
 - Adds `AnGo: Validate current folder`.
 - Adds `AnGo: Validate vault`.
+- Adds `AnGo: Open control surface`.
 - Runs the existing vault validators from the configured vault root.
+- Shows a read-only control surface for vault root, Python command, AnGo context, schema, workflow contract, and validator readiness.
 - Shows command status, duration, stdout, stderr, and failure details in an Obsidian view.
 - Summarizes validation runs with error/warning counts, failed validators, highlighted findings, copy buttons, and links to referenced vault files when they can be resolved safely.
 - Shows a status bar indicator for the latest run and keeps a short in-memory session history.

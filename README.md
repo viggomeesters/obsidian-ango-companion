@@ -1,3 +1,7 @@
+> **Deprecated — 13 November 2026.** AnGo Companion is no longer actively maintained or intended for new installations. It depends on legacy private validators that a standard vault does not contain. Version 1.0.2 remains available for existing users; it has not been submitted to the Community catalog.
+>
+> A ViggObsidian plugin is being developed as the successor, using shared Rust validation rules locally inside Obsidian. Its link-style WASM feasibility proof is complete ([ViggObsidian PR #67](https://github.com/viggomeesters/viggobsidian/pull/67)); the successor is not yet a published plugin. Migration instructions will follow when it is available. This repository remains accessible during that transition.
+
 <p align="center">
   <img src="assets/hero.svg" alt="AnGo Companion for Obsidian" width="100%">
 </p>
@@ -16,7 +20,7 @@ AnGo Companion is a desktop-only Obsidian plugin that runs local vault validatio
 
 ![AnGo Companion preview](assets/screenshot.svg)
 
-## Features
+## Legacy features
 
 - Adds `AnGo: Validate current note`.
 - Adds `AnGo: Validate changed files`.
@@ -58,15 +62,17 @@ For changed-file validation, `<target>` is `--changed`. For current-note validat
 
 AnGo Companion does not make network requests and does not send vault content to external services. Validation happens locally by spawning the configured Python command from the configured vault root.
 
-## Installation
+## Existing installations
+
+New installations are discouraged. Existing releases and their settings remain unchanged; the instructions below are retained for existing users, not a supported new deployment route. Do not remove your current setup on the assumption that the successor is already available.
 
 ### Community plugin directory
 
-AnGo Companion is structured for Obsidian Community plugin submission. Once accepted, it can be installed from **Settings -> Community plugins -> Browse** inside Obsidian.
+AnGo Companion is not in the Community catalog and will not be submitted in its deprecated form.
 
 ### Manual installation
 
-Until the community directory submission is accepted:
+For an existing legacy environment with the required validators:
 
 1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/viggomeesters/obsidian-ango-companion/releases/latest).
 2. Create this folder in your vault: `.obsidian/plugins/ango-companion/`.
@@ -111,7 +117,9 @@ OBSIDIAN_VAULT_ROOT="/path/to/your/vault" npm run install:vault
 
 For local development, run `npm run build` and set `OBSIDIAN_VAULT_ROOT` when running `npm run install:vault`. The install script copies the release assets into `.obsidian/plugins/ango-companion/` inside that vault.
 
-## Release process
+## Historical release process
+
+No further AnGo feature releases or Community submission are planned. The steps below document the existing release format.
 
 Obsidian installs community plugin files from GitHub releases. For each release:
 
@@ -120,20 +128,9 @@ Obsidian installs community plugin files from GitHub releases. For each release:
 3. Create a GitHub release whose tag exactly matches `manifest.json.version`.
 4. Attach `main.js`, `manifest.json`, and `styles.css` as release assets.
 
-## Community directory submission
+## Successor and support status
 
-The repository is prepared for Obsidian Community plugin submission. The remaining submission step must be completed by the repository owner in the Obsidian Community site because it requires signing in, linking GitHub, and confirming the developer policies/support commitment.
-
-Submit this repository URL:
-
-```text
-https://github.com/viggomeesters/obsidian-ango-companion
-```
-
-Official references:
-
-- [Submit your plugin](https://docs.obsidian.md/Plugins/Releasing/Submit%20your%20plugin)
-- [Obsidian releases repository](https://github.com/obsidianmd/obsidian-releases)
+[Issue #1](https://github.com/viggomeesters/obsidian-ango-companion/issues/1) records the deprecation decision and successor transition. The existing plugin is not automatically replaced. The ViggObsidian successor needs its own plugin interface, review, runtime testing and release/catalog acceptance before migration can be recommended.
 
 ## License
 

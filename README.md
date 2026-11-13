@@ -1,6 +1,6 @@
 > **Deprecated — 13 November 2026.** AnGo Companion is no longer actively maintained or intended for new installations. It depends on legacy private validators that a standard vault does not contain. Version 1.0.2 remains available for existing users; it has not been submitted to the Community catalog.
 >
-> A ViggObsidian plugin is being developed as the successor, using shared Rust validation rules locally inside Obsidian. Its link-style WASM feasibility proof is complete ([ViggObsidian PR #67](https://github.com/viggomeesters/viggobsidian/pull/67)); the successor is not yet a published plugin. Migration instructions will follow when it is available. This repository remains accessible during that transition.
+> **ViggVault**, powered by ViggObsidian, is being developed as the successor, using shared Rust validation rules locally inside Obsidian. Its link-style WASM feasibility proof is complete ([ViggObsidian PR #67](https://github.com/viggomeesters/viggobsidian/pull/67)); the successor has a tested private source preview but is not yet a published plugin. Migration instructions will follow when it is publicly available. This repository remains accessible during that transition.
 
 <p align="center">
   <img src="assets/hero.svg" alt="AnGo Companion for Obsidian" width="100%">

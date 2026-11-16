@@ -135,3 +135,6 @@ Obsidian installs community plugin files from GitHub releases. For each release:
 ## License
 
 [MIT](LICENSE)
+
+
+[Obsidian 1.15.1 assessment: checked source, local results and remaining host validation](docs/obsidian-1.15.1.md).
